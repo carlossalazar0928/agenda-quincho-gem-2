@@ -125,10 +125,10 @@
       <h3 style="font-size: 1rem; color: var(--azul-primario); margin-top: 10px;">👥 Invitados (Valores unitarios):</h3>
       <div class="grid-invitados">
         <div class="form-group"><label>Mayores ($7.700)</label><input type="number" id="may" value="0" min="0" oninput="calcularTotal()"></div>
-        <div class="grid-invitados-item"><div class="form-group"><label>Juveniles ($5.500)</label><input type="number" id="juv" value="0" min="0" oninput="calcularTotal()"></div></div>
+        <div class="form-group"><label>Juveniles ($5.500)</label><input type="number" id="juv" value="0" min="0" oninput="calcularTotal()"></div>
         <div class="form-group"><label>Jubilados ($4.900)</label><input type="number" id="jub" value="0" min="0" oninput="calcularTotal()"></div>
         <div class="form-group"><label>Menores ($4.000)</label><input type="number" id="men" value="0" min="0" oninput="calcularTotal()"></div>
-        <div class="form-group"><label>Infantiles (Gratis)</label><input type="number" id="inf" value="0" min="0" oninput="calcularTotal()"></div>
+        <div class="form-group"><label>Infantiles (Sin cargo)</label><input type="number" id="inf" value="0" min="0" oninput="calcularTotal()"></div>
       </div>
 
       <div style="background:#f8fafc; padding:15px; border-radius:12px; margin-top:10px; border: 1px solid #e2e8f0;">
@@ -160,7 +160,7 @@
         <p>Alias: CENTRO.ASTURIANO.BA <button class="btn-copy" onclick="copiar('CENTRO.ASTURIANO.BA')">📋 Copiar</button></p>
         <hr>
         <p style="color:var(--rojo); font-weight:bold;">⚠️ Nota Importante:</p>
-        <p>Si desea abonar por otro medio (Efectivo/Débito), deberá realizarlo por **Ventanilla** hasta un día antes.</p>
+        <p>Si desea abonar por otro medio de pago (Efectivo/Débito), deberá realizarlo por **Ventanilla** de administración hasta un día antes del evento.</p>
       </div>
 
       <div class="grid-2" style="margin-top:20px;">
@@ -171,7 +171,6 @@
   </div>
 
 <script>
-  // PEGA TU URL DE APPS SCRIPT AQUÍ
   const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxyMnbKofoiIxxratQjr99QGz_PYdaYakB37__PGiE4JKDGnCmlf5R1pYfPSSf2IisEfA/exec';
 
   const TARIFAS = { may: 7700, juv: 5500, jub: 4900, men: 4000, inf: 0, inflable: 20000, seguridad: 20000 };
@@ -193,15 +192,23 @@
   }
 
   function copiar(texto) {
-    navigator.clipboard.writeText(texto).then(() => { alert("✅ Copiado: " + texto); });
+    navigator.clipboard.writeText(texto).then(() => {
+      alert("✅ Copiado: " + texto);
+    });
   }
 
   function validarSocio() {
     const socio = document.getElementById('numSocio').value;
     const fecha = document.getElementById('fechaNac').value;
     const btn = document.getElementById('btnValidar');
-    if (!socio || !fecha) { alert("Completar socio y fecha"); return; }
-    btn.innerText = "⏳ Verificando..."; btn.disabled = true;
+
+    if (!socio || !fecha) {
+      alert("Por favor completa ambos campos");
+      return;
+    }
+
+    btn.innerText = "⏳ Verificando...";
+    btn.disabled = true;
 
     fetch(`${APPS_SCRIPT_URL}?action=validarSocio&numSocio=${socio}&fechaNac=${fecha}`)
       .then(r => r.json())
@@ -211,8 +218,15 @@
           document.getElementById('nombreSocioDisplay').innerText = "Socio/a: " + socioNombre;
           document.getElementById('modalValidacion').classList.remove('activa');
           document.getElementById('app').style.display = 'block';
-        } else { alert("❌ " + res.mensaje); }
-      }).catch(e => alert("Error de conexión")).finally(() => { btn.innerText = "🚀 Ingresar"; btn.disabled = false; });
+        } else {
+          alert("❌ " + res.mensaje);
+        }
+      })
+      .catch(e => alert("Error de conexión con el servidor"))
+      .finally(() => {
+        btn.innerText = "🚀 Ingresar";
+        btn.disabled = false;
+      });
   }
 
   function calcularTotal() {
@@ -224,70 +238,110 @@
       men: parseInt(document.getElementById('men').value) || 0,
       inf: parseInt(document.getElementById('inf').value) || 0
     };
+    
     const totalInv = Object.values(counts).reduce((a, b) => a + b, 0);
     document.getElementById('totalInvitados').value = totalInv;
 
-    let total = (counts.may*TARIFAS.may) + (counts.juv*TARIFAS.juv) + (counts.jub*TARIFAS.jub) + (counts.men*TARIFAS.men);
+    let subtotalInvitados = (counts.may * TARIFAS.may) + (counts.juv * TARIFAS.juv) + (counts.jub * TARIFAS.jub) + (counts.men * TARIFAS.men);
+    
     descuentoAplicado = 0;
     if (document.getElementById('cumple').checked) {
       let cupo = 10;
-      ['may', 'juv', 'jub', 'men'].forEach(t => {
-        let d = Math.min(counts[t], cupo);
-        descuentoAplicado += (d * TARIFAS[t]); cupo -= d;
+      const orden = ['may', 'juv', 'jub', 'men'];
+      orden.forEach(tipo => {
+        if (cupo > 0 && counts[tipo] > 0) {
+          let descontar = Math.min(counts[tipo], cupo);
+          descuentoAplicado += (descontar * TARIFAS[tipo]);
+          cupo -= descontar;
+        }
       });
     }
-    total -= descuentoAplicado;
+
+    let total = subtotalInvitados - descuentoAplicado;
+
     seguridadActiva = false;
     if (hFin.includes(':')) {
-      let [h, m] = hFin.split(':').map(Number);
-      if ((h*60+m) >= 10 && (h*60+m) <= 300) { total += TARIFAS.seguridad; seguridadActiva = true; }
+      let [hh, mm] = hFin.split(':').map(Number);
+      let minTotales = (hh * 60) + mm;
+      if (minTotales >= 10 && minTotales <= 300) {
+        total += TARIFAS.seguridad;
+        seguridadActiva = true;
+        if (!window.seguridadAlerta) {
+          alert("👮 SEGURIDAD:\nPara reuniones pasadas las 00:00hs se tiene que abonar la seguridad correspondiente a 5 horas ($20.000).");
+          window.seguridadAlerta = true;
+        }
+      } else { window.seguridadAlerta = false; }
     }
+
     if (document.getElementById('inflable').checked) total += TARIFAS.inflable;
+
     document.getElementById('montoVisual').innerText = total.toLocaleString('es-AR');
     document.getElementById('btnConfirmar').disabled = (totalInv === 0);
   }
 
-  function alertaInflable(cb) { if(cb.checked) alert("🎈 AVISO: Enviar ART/Seguro del inflable antes del evento."); }
-  function alertaCumple(cb) { if(cb.checked) alert("🎉 AVISO: Válido 30 días desde el nacimiento."); }
+  function alertaInflable(cb) {
+    if(cb.checked) alert("🎈 AVISO INFLABLE:\n\nEn los casos que se desea traer inflable se tendría que abonar locación $20.000...");
+  }
+
+  function alertaCumple(cb) {
+    if(cb.checked) alert("🎉 AVISO CUMPLEAÑERO:\n\nEs un beneficio único para el socio cumpleañero...");
+  }
 
   function abrirConfirmacion() {
-    const html = `
+    const segVal = seguridadActiva ? TARIFAS.seguridad : 0;
+    const infVal = document.getElementById('inflable').checked ? TARIFAS.inflable : 0;
+
+    let html = `
       <div class="item-detalle"><span>Socio:</span> <span>${socioNombre}</span></div>
       <div class="item-detalle"><span>📅 Fecha:</span> <span>${document.getElementById('fechaEvento').value}</span></div>
       <div class="item-detalle"><span>🕒 Horario:</span> <span>${document.getElementById('horaInicio').value} a ${document.getElementById('horaFin').value}</span></div>
-      <div class="item-detalle"><span>👥 Total Invitados:</span> <span>${document.getElementById('totalInvitados').value}</span></div>
-      <div class="total-box"><b>TOTAL: ARS $${document.getElementById('montoVisual').innerText}</b></div>
+      <div class="item-detalle"><span>👥 Invitados:</span> <span>${document.getElementById('totalInvitados').value}</span></div>
+      <div class="item-detalle"><span>🎈 Inflable:</span> <span>$${infVal.toLocaleString('es-AR')}</span></div>
+      <div class="item-detalle"><span>👮 Seguridad:</span> <span>$${segVal.toLocaleString('es-AR')}</span></div>
     `;
+
+    if(descuentoAplicado > 0) {
+      html += `<div class="item-detalle bonus"><span>🎁 Bonificación 10p:</span> <span>- $${descuentoAplicado.toLocaleString('es-AR')}</span></div>`;
+    }
+
+    html += `<div class="total-box"><b>TOTAL FINAL: ARS $${document.getElementById('montoVisual').innerText}</b></div>`;
+
     document.getElementById('desgloseFinal').innerHTML = html;
     document.getElementById('modalFinal').classList.add('activa');
   }
 
   function enviarDatosFinales() {
     const btn = document.getElementById('btnEnviar');
-    btn.innerText = "⏳ Guardando..."; btn.disabled = true;
+    btn.innerText = "⏳ Guardando...";
+    btn.disabled = true;
 
-    const params = new URLSearchParams({
-      action: 'guardarAgenda',
-      numSocio: document.getElementById('numSocio').value,
-      socio: socioNombre,
-      tipo: document.getElementById('tipoQuincho').value,
-      fechaEvento: document.getElementById('fechaEvento').value,
-      horaInicio: document.getElementById('horaInicio').value,
-      horaFin: document.getElementById('horaFin').value,
-      totalInvitados: document.getElementById('totalInvitados').value,
-      total: document.getElementById('montoVisual').innerText,
-      listaInvitados: `May: ${document.getElementById('may').value}, Juv: ${document.getElementById('juv').value}, Jub: ${document.getElementById('jub').value}, Men: ${document.getElementById('men').value}`
-    });
+    const numSocio = document.getElementById('numSocio').value;
+    const tipo = document.getElementById('tipoQuincho').value;
+    const fecha = document.getElementById('fechaEvento').value;
+    const hIni = document.getElementById('horaInicio').value;
+    const hFin = document.getElementById('horaFin').value;
+    const invitados = document.getElementById('totalInvitados').value;
+    const totalStr = document.getElementById('montoVisual').innerText;
+    const detalle = `May: ${document.getElementById('may').value}, Juv: ${document.getElementById('juv').value}, Jub: ${document.getElementById('jub').value}, Men: ${document.getElementById('men').value}`;
 
-    fetch(`${APPS_SCRIPT_URL}?${params.toString()}`)
+    const urlFinal = `${APPS_SCRIPT_URL}?action=guardarAgenda&numSocio=${encodeURIComponent(numSocio)}&socio=${encodeURIComponent(socioNombre)}&tipo=${encodeURIComponent(tipo)}&fechaEvento=${encodeURIComponent(fecha)}&horaInicio=${encodeURIComponent(hIni)}&horaFin=${encodeURIComponent(hFin)}&totalInvitados=${encodeURIComponent(invitados)}&total=${encodeURIComponent(totalStr)}&listaInvitados=${encodeURIComponent(detalle)}`;
+
+    fetch(urlFinal, { method: 'GET' })
       .then(r => r.json())
       .then(res => {
         if (res.exito) {
-          alert("✅ ¡Reserva guardada!");
-          window.open(`https://wa.me/5491151585858?text=Reserva Quincho de ${socioNombre}`, '_blank');
+          alert("✅ ¡Reserva guardada con éxito!");
+          window.open(`https://wa.me/5491151585858?text=Hola! Envío comprobante de reserva Quincho de ${socioNombre}`, '_blank');
           location.reload();
-        } else { alert("🚫 " + res.mensaje); }
-      }).catch(e => alert("Error de servidor")).finally(() => { btn.innerText = "💾 Confirmar"; btn.disabled = false; });
+        } else {
+          alert("❌ Error: " + res.mensaje);
+        }
+      })
+      .catch(e => alert("⚠️ Error al conectar. Intente nuevamente."))
+      .finally(() => {
+        btn.innerText = "💾 Confirmar y Guardar";
+        btn.disabled = false;
+      });
   }
 
   function cerrarModal(id) { document.getElementById(id).classList.remove('activa'); }
