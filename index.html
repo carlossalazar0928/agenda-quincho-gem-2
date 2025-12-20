@@ -151,7 +151,7 @@
 
   <div id="modalFinal" class="modal">
     <div class="modal-content">
-      <h2 style="text-align:center; color:var(--azul-primario); margin-bottom: 15px;">📋 Detalle de Reserva</h2>
+      <h2 style="text-align:center; color:var(--azul-primario); margin-bottom: 15px;">📋 Detalle de la Agenda</h2>
       <div id="desgloseFinal"></div>
       
       <div style="background:#f1f5f9; padding:15px; border-radius:12px; font-size:0.85rem; margin-top:15px; border-left: 4px solid var(--azul-primario);">
@@ -280,11 +280,11 @@
   }
 
   function alertaInflable(cb) {
-    if(cb.checked) alert("🎈 AVISO INFLABLE:\n\nEn los casos que se desea traer inflable se tendría que abonar locación $20.000...");
+    if(cb.checked) alert("🎈 AVISO INFLABLE:\n\nEn los casos que se desea traer inflable se tendria que abonar locacion $20.000, hasta 1 dia previo al evento, ART y/o seguro de accidentes personales con cláusula de no repetición a nombre del CENTRO ASTURIANO DE BENOS AIRES Cuit: 30-54586286-3");
   }
 
   function alertaCumple(cb) {
-    if(cb.checked) alert("🎉 AVISO CUMPLEAÑERO:\n\nEs un beneficio único para el socio cumpleañero...");
+    if(cb.checked) alert("🎉 AVISO CUMPLEAÑERO:\n\nbeneficio unico para el socio cumpleañero para ser uso por unica vez desde la fecha de nacimiento hasta 30 dias corridos.");
   }
 
   function abrirConfirmacion() {
@@ -330,7 +330,7 @@
       .then(r => r.json())
       .then(res => {
         if (res.exito) {
-          alert("✅ ¡Reserva guardada con éxito!");
+          alert("✅ ¡Agenda guardada con éxito!: para el disfrute del beneficio de agenda el socio debe estar al dia con su cuota.");
           window.open(`https://wa.me/5491151585858?text=Hola! Envío comprobante de reserva Quincho de ${socioNombre}`, '_blank');
           location.reload();
         } else {
