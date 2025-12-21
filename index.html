@@ -101,10 +101,10 @@
       </div>
 
       <div class="grid-2">
-        <div class="form-group">
-          <label>📅 Fecha del Evento</label>
-          <input type="text" id="fechaEvento" placeholder="DD/MM/AAAA" oninput="mascaraFecha(this); calcularTotal();">
-        </div>
+<div class="form-group">
+  <label>📅 Fecha del Evento <span style="font-size: 0.75rem; color: var(--rojo); font-weight: normal;">(Máximo 10 días de antelación)</span></label>
+  <input type="text" id="fechaEvento" placeholder="DD/MM/AAAA" oninput="mascaraFecha(this); calcularTotal();">
+</div>
         <div class="form-group">
           <label>👥 Total Invitados</label>
           <input type="number" id="totalInvitados" readonly style="background:#e2e8f0">
@@ -287,13 +287,45 @@
     if(cb.checked) alert("🎉 AVISO CUMPLEAÑERO:\n\nbeneficio unico para el socio cumpleañero para ser uso por unica vez desde la fecha de nacimiento hasta 30 dias corridos.");
   }
 
-  function abrirConfirmacion() {
+function abrirConfirmacion() {
+    const fechaInput = document.getElementById('fechaEvento').value;
+    
+    // 1. Validar que la fecha esté completa
+    if (!fechaInput || fechaInput.length < 10) {
+      alert("⚠️ Por favor, ingresá una fecha válida (DD/MM/AAAA)");
+      return;
+    }
+
+    // 2. Convertir fecha del input a objeto Date
+    const [dia, mes, anio] = fechaInput.split('/').map(Number);
+    const fechaElegida = new Date(anio, mes - 1, dia);
+    
+    // 3. Obtener fecha de hoy (sin horas para comparar solo días)
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+
+    // 4. Calcular diferencia
+    const milisegundosPorDia = 24 * 60 * 60 * 1000;
+    const diffDias = Math.floor((fechaElegida - hoy) / milisegundosPorDia);
+
+    // --- VALIDACIONES ---
+    if (diffDias < 0) {
+      alert("🚫 No se pueden realizar reservas para fechas pasadas.");
+      return;
+    }
+
+    if (diffDias > 10) {
+      alert(`🚫 Solo se permiten reservas con un máximo de 10 días de antelación.\n\nHoy es ${hoy.toLocaleDateString('es-AR')}, podés reservar hasta el ${(new Date(hoy.getTime() + 10 * milisegundosPorDia)).toLocaleDateString('es-AR')}.`);
+      return;
+    }
+
+    // Si pasa las validaciones, sigue con el desglose habitual
     const segVal = seguridadActiva ? TARIFAS.seguridad : 0;
     const infVal = document.getElementById('inflable').checked ? TARIFAS.inflable : 0;
 
     let html = `
       <div class="item-detalle"><span>Socio:</span> <span>${socioNombre}</span></div>
-      <div class="item-detalle"><span>📅 Fecha:</span> <span>${document.getElementById('fechaEvento').value}</span></div>
+      <div class="item-detalle"><span>📅 Fecha:</span> <span>${fechaInput}</span></div>
       <div class="item-detalle"><span>🕒 Horario:</span> <span>${document.getElementById('horaInicio').value} a ${document.getElementById('horaFin').value}</span></div>
       <div class="item-detalle"><span>👥 Invitados:</span> <span>${document.getElementById('totalInvitados').value}</span></div>
       <div class="item-detalle"><span>🎈 Inflable:</span> <span>$${infVal.toLocaleString('es-AR')}</span></div>
