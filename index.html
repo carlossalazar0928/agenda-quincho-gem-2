@@ -197,36 +197,49 @@
     });
   }
 
-  function validarSocio() {
+function validarSocio() {
     const socio = document.getElementById('numSocio').value;
-    const fecha = document.getElementById('fechaNac').value;
+    const fechaRaw = document.getElementById('fechaNac').value; // Ejemplo: "01/02/1234"
     const btn = document.getElementById('btnValidar');
 
-    if (!socio || !fecha) {
+    if (!socio || !fechaRaw) {
       alert("Por favor completa ambos campos");
       return;
     }
 
-    btn.innerText = "⏳ Verificando...";
-    btn.disabled = true;
+    // --- NUEVA LÓGICA DE LIMPIEZA SELECTIVA ---
+    const partes = fechaRaw.split('/');
+    if (partes.length === 3) {
+      const dia = parseInt(partes[0], 10); // Quita el cero: "01" -> 1
+      const mes = partes[1];               // Mantiene el mes como está: "02"
+      const anio = partes[2];              // Mantiene el año
+      
+      const fechaLimpia = `${dia}/${mes}/${anio}`; // Resultado: "1/02/1234"
 
-    fetch(`${APPS_SCRIPT_URL}?action=validarSocio&numSocio=${socio}&fechaNac=${fecha}`)
-      .then(r => r.json())
-      .then(res => {
-        if (res.exito) {
-          socioNombre = res.nombre;
-          document.getElementById('nombreSocioDisplay').innerText = "Socio/a: " + socioNombre;
-          document.getElementById('modalValidacion').classList.remove('activa');
-          document.getElementById('app').style.display = 'block';
-        } else {
-          alert("❌ " + res.mensaje);
-        }
-      })
-      .catch(e => alert("Error de conexión con el servidor"))
-      .finally(() => {
-        btn.innerText = "🚀 Ingresar";
-        btn.disabled = false;
-      });
+      btn.innerText = "⏳ Verificando...";
+      btn.disabled = true;
+
+      // Enviamos la fecha procesada
+      fetch(`${APPS_SCRIPT_URL}?action=validarSocio&numSocio=${socio}&fechaNac=${fechaLimpia}`)
+        .then(r => r.json())
+        .then(res => {
+          if (res.exito) {
+            socioNombre = res.nombre;
+            document.getElementById('nombreSocioDisplay').innerText = "Socio/a: " + socioNombre;
+            document.getElementById('modalValidacion').classList.remove('activa');
+            document.getElementById('app').style.display = 'block';
+          } else {
+            alert("❌ " + res.mensaje);
+          }
+        })
+        .catch(e => alert("Error de conexión"))
+        .finally(() => {
+          btn.innerText = "🚀 Ingresar";
+          btn.disabled = false;
+        });
+    } else {
+      alert("Formato de fecha incorrecto");
+    }
   }
 
   function calcularTotal() {
