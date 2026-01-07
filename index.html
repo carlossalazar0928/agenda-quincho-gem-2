@@ -199,7 +199,7 @@
 
 function validarSocio() {
     const socio = document.getElementById('numSocio').value;
-    const fechaRaw = document.getElementById('fechaNac').value; // Ejemplo: "01/02/1234"
+    const fechaRaw = document.getElementById('fechaNac').value; // Ejemplo: "1/1/1999" o "01/01/1999"
     const btn = document.getElementById('btnValidar');
 
     if (!socio || !fechaRaw) {
@@ -207,17 +207,42 @@ function validarSocio() {
       return;
     }
 
-    // --- NUEVA LÓGICA DE LIMPIEZA SELECTIVA ---
+    // --- LÓGICA CORREGIDA PARA MANTENER/AGREGAR EL CERO ---
     const partes = fechaRaw.split('/');
     if (partes.length === 3) {
-      const dia = parseInt(partes[0], 10); // Quita el cero: "01" -> 1
-      const mes = partes[1];               // Mantiene el mes como está: "02"
-      const anio = partes[2];              // Mantiene el año
+      // .padStart(2, '0') asegura que si el usuario pone "1", se convierta en "01"
+      // Si ya puso "01", se mantiene igual.
+      const dia = partes[0].padStart(2, '0'); 
+      const mes = partes[1].padStart(2, '0'); 
+      const anio = partes[2];
       
-      const fechaLimpia = `${dia}/${mes}/${anio}`; // Resultado: "1/02/1234"
+      const fechaProcesada = `${dia}/${mes}/${anio}`; // Resultado siempre: "01/01/1999"
 
       btn.innerText = "⏳ Verificando...";
       btn.disabled = true;
+
+      // Enviamos la fecha procesada con el formato correcto a la hoja de cálculo
+      fetch(`${APPS_SCRIPT_URL}?action=validarSocio&numSocio=${socio}&fechaNac=${fechaProcesada}`)
+        .then(r => r.json())
+        .then(res => {
+          if (res.exito) {
+            socioNombre = res.nombre;
+            document.getElementById('nombreSocioDisplay').innerText = "Socio/a: " + socioNombre;
+            document.getElementById('modalValidacion').classList.remove('activa');
+            document.getElementById('app').style.display = 'block';
+          } else {
+            alert("❌ " + res.mensaje);
+          }
+        })
+        .catch(e => alert("Error de conexión"))
+        .finally(() => {
+          btn.innerText = "🔥 Ingresar 🪵";
+          btn.disabled = false;
+        });
+    } else {
+      alert("Formato de fecha incorrecto. Use DD/MM/AAAA");
+    }
+}
 
       // Enviamos la fecha procesada
       fetch(`${APPS_SCRIPT_URL}?action=validarSocio&numSocio=${socio}&fechaNac=${fechaLimpia}`)
